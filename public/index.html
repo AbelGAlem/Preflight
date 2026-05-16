@@ -260,15 +260,6 @@
     chainId: '1',
   };
 
-  let paymentInfo = { price: '$0.01', network: 'base-sepolia', configured: false };
-
-  fetch('/payment')
-    .then((res) => res.ok ? res.json() : null)
-    .then((data) => {
-      if (data) paymentInfo = data;
-    })
-    .catch(() => {});
-
   function fillForm(demo) {
     document.getElementById('from').value = demo.from;
     document.getElementById('to').value = demo.to;
@@ -305,16 +296,12 @@
         body: JSON.stringify(payload),
       });
 
-      const data = await readResponseBody(res);
+      const data = await res.json();
 
       if (res.status === 402) {
         headerEl.className = 'result-header fail';
         headerEl.textContent = '⚡ Payment Required';
-        bodyEl.innerHTML = `<div class="revert-reason">${escHtml(paymentRequiredMessage())}</div>`;
-      } else if (!res.ok) {
-        headerEl.className = 'result-header fail';
-        headerEl.textContent = 'Request failed';
-        bodyEl.innerHTML = `<div class="revert-reason">${escHtml(data.detail || data.error || data.message || 'Request failed')}</div>`;
+        bodyEl.innerHTML = '<div class="revert-reason">x402 payment required — $0.01 USDC on Base Sepolia</div>';
       } else {
         headerEl.className = `result-header ${data.success ? 'success' : 'fail'}`;
         headerEl.textContent = data.success ? '✓ Transaction will succeed' : '✗ Transaction will revert';
@@ -350,20 +337,6 @@
 
   function row(key, val) {
     return `<div class="result-row"><span class="key">${key}</span><span class="val">${escHtml(String(val))}</span></div>`;
-  }
-
-  async function readResponseBody(res) {
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      return res.json();
-    }
-
-    const text = await res.text();
-    return { error: text };
-  }
-
-  function paymentRequiredMessage() {
-    return `x402 payment required - ${paymentInfo.price} USDC on ${paymentInfo.network}`;
   }
 
   function escHtml(str) {

@@ -77,19 +77,12 @@ Response extraction:
 
 Configured via `WALLET_ADDRESS` and `PRICE_PER_REQUEST` env vars.
 
-Implementation notes:
-- `src/middleware/payment.js` gates only `POST /simulate`; health, static UI, `/payment`, and `/mcp` remain free.
-- The app returns `503` from `POST /simulate` if payment env vars are missing or invalid, instead of silently serving paid simulations for free.
-- `GET /payment` exposes non-secret payment metadata for the UI and smoke tests.
-
 ## Environment Variables
 
 ```
 TENDERLY_NODE_ACCESS_KEY=   # from dashboard.tenderly.co → Node → copy key after last slash
 WALLET_ADDRESS=             # Base wallet to receive payments
 PRICE_PER_REQUEST=0.01
-PAYMENT_NETWORK=base-sepolia
-PAYMENT_FACILITATOR_URL=   # optional facilitator override
 PORT=3000
 NODE_ENV=development
 ```

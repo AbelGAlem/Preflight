@@ -1,10 +1,7 @@
 ### Health check
 GET http://localhost:3000/health
 
-### Payment config
-GET http://localhost:3000/payment
-
-### Simulate - unpaid request (returns 402 when x402 is configured)
+### Simulate — success (Vitalik sends 100 USDC)
 POST http://localhost:3000/simulate
 Content-Type: application/json
 
@@ -16,23 +13,9 @@ Content-Type: application/json
   "chainId": 1
 }
 
-### Simulate - success (paste a paid x402 payload)
+### Simulate — fail (empty wallet tries to send USDC)
 POST http://localhost:3000/simulate
 Content-Type: application/json
-X-PAYMENT: paste-x402-payment-payload-here
-
-{
-  "from": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-  "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-  "data": "0xa9059cbb000000000000000000000000ab5801a7d398351b8be11c439e05c5b3259aec9b0000000000000000000000000000000000000000000000000000000005f5e100",
-  "value": "0",
-  "chainId": 1
-}
-
-### Simulate - fail (empty wallet tries to send USDC)
-POST http://localhost:3000/simulate
-Content-Type: application/json
-X-PAYMENT: paste-x402-payment-payload-here
 
 {
   "from": "0x0000000000000000000000000000000000000001",
@@ -42,10 +25,9 @@ X-PAYMENT: paste-x402-payment-payload-here
   "chainId": 1
 }
 
-### Simulate - invalid request (paid request should trigger Zod validation)
+### Simulate — invalid request (bad address, triggers Zod validation)
 POST http://localhost:3000/simulate
 Content-Type: application/json
-X-PAYMENT: paste-x402-payment-payload-here
 
 {
   "from": "not-an-address",
@@ -55,7 +37,7 @@ X-PAYMENT: paste-x402-payment-payload-here
   "chainId": 1
 }
 
-### MCP - initialize
+### MCP — initialize
 POST http://localhost:3000/mcp
 Content-Type: application/json
 Accept: application/json, text/event-stream
@@ -71,7 +53,7 @@ Accept: application/json, text/event-stream
   }
 }
 
-### MCP - list tools
+### MCP — list tools
 POST http://localhost:3000/mcp
 Content-Type: application/json
 Accept: application/json, text/event-stream
@@ -83,7 +65,7 @@ Accept: application/json, text/event-stream
   "params": {}
 }
 
-### MCP - call preflight_simulate
+### MCP — call preflight_simulate
 POST http://localhost:3000/mcp
 Content-Type: application/json
 Accept: application/json, text/event-stream
