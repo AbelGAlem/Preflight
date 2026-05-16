@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PreFlight — Simulate before you transact</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --surface: #161616;
+      --border: #2a2a2a;
+      --text: #e8e8e8;
+      --muted: #888;
+      --accent: #6c63ff;
+      --accent-hover: #7d75ff;
+      --success: #22c55e;
+      --fail: #ef4444;
+      --input-bg: #1e1e1e;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    header h1 span { color: var(--accent); }
+
+    header p {
+      color: var(--muted);
+      margin-top: 8px;
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .demo-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .btn-demo {
+      flex: 1;
+      padding: 9px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--input-bg);
+      color: var(--muted);
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .btn-demo:hover { border-color: var(--accent); color: var(--text); }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+
+    label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    input, select {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 10px 12px;
+      width: 100%;
+      transition: border-color 0.15s;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    select option { background: var(--surface); }
+
+    .btn-simulate {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.15s, opacity 0.15s;
+    }
+
+    .btn-simulate:hover { background: var(--accent-hover); }
+    .btn-simulate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .result {
+      margin-top: 24px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      display: none;
+    }
+
+    .result.visible { display: block; }
+
+    .result-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 18px;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .result-header.success { background: rgba(34,197,94,0.1); color: var(--success); }
+    .result-header.fail    { background: rgba(239,68,68,0.1);  color: var(--fail); }
+
+    .result-body {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      font-size: 0.88rem;
+    }
+
+    .result-row .key { color: var(--muted); }
+    .result-row .val { font-family: 'SF Mono', 'Fira Code', monospace; text-align: right; max-width: 70%; word-break: break-all; }
+
+    .revert-reason {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-size: 0.85rem;
+      color: var(--fail);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+    }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: inline-block;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .timestamp { font-size: 0.75rem; color: var(--muted); margin-top: 4px; text-align: right; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Pre<span>Flight</span></h1>
+  <p>Simulate before you transact</p>
+</header>
+
+<div class="card">
+  <div class="demo-buttons">
+    <button class="btn-demo" id="btn-success">Load success example</button>
+    <button class="btn-demo" id="btn-fail">Load fail example</button>
+  </div>
+
+  <div class="form-group">
+    <label for="from">From</label>
+    <input id="from" type="text" placeholder="0x..." />
+  </div>
+
+  <div class="form-group">
+    <label for="to">To</label>
+    <input id="to" type="text" placeholder="0x..." />
+  </div>
+
+  <div class="form-group">
+    <label for="data">Data (hex calldata)</label>
+    <input id="data" type="text" placeholder="0x" />
+  </div>
+
+  <div class="form-group">
+    <label for="value">Value (wei)</label>
+    <input id="value" type="text" placeholder="0" />
+  </div>
+
+  <div class="form-group">
+    <label for="chainId">Network</label>
+    <select id="chainId">
+      <option value="1">Ethereum Mainnet</option>
+      <option value="8453">Base</option>
+      <option value="137">Polygon</option>
+    </select>
+  </div>
+
+  <button class="btn-simulate" id="btn-simulate">Simulate Transaction</button>
+
+  <div class="result" id="result">
+    <div class="result-header" id="result-header"></div>
+    <div class="result-body" id="result-body"></div>
+  </div>
+</div>
+
+<script>
+  const DEMO_SUCCESS = {
+    from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0xa9059cbb000000000000000000000000ab5801a7d398351b8be11c439e05c5b3259aec9b0000000000000000000000000000000000000000000000000000000005f5e100',
+    value: '0',
+    chainId: '1',
+  };
+
+  const DEMO_FAIL = {
+    from: '0x0000000000000000000000000000000000000001',
+    to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    data: '0xa9059cbb000000000000000000000000ab5801a7d398351b8be11c439e05c5b3259aec9b0000000000000000000000000000000000000000000000000000000005f5e100',
+    value: '0',
+    chainId: '1',
+  };
+
+  function fillForm(demo) {
+    document.getElementById('from').value = demo.from;
+    document.getElementById('to').value = demo.to;
+    document.getElementById('data').value = demo.data;
+    document.getElementById('value').value = demo.value;
+    document.getElementById('chainId').value = demo.chainId;
+  }
+
+  document.getElementById('btn-success').addEventListener('click', () => fillForm(DEMO_SUCCESS));
+  document.getElementById('btn-fail').addEventListener('click', () => fillForm(DEMO_FAIL));
+
+  document.getElementById('btn-simulate').addEventListener('click', async () => {
+    const btn = document.getElementById('btn-simulate');
+    const resultEl = document.getElementById('result');
+    const headerEl = document.getElementById('result-header');
+    const bodyEl = document.getElementById('result-body');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Simulating…';
+    resultEl.classList.remove('visible');
+
+    const payload = {
+      from: document.getElementById('from').value.trim(),
+      to: document.getElementById('to').value.trim(),
+      data: document.getElementById('data').value.trim() || '0x',
+      value: document.getElementById('value').value.trim() || '0',
+      chainId: parseInt(document.getElementById('chainId').value),
+    };
+
+    try {
+      const res = await fetch('/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (res.status === 402) {
+        headerEl.className = 'result-header fail';
+        headerEl.textContent = '⚡ Payment Required';
+        bodyEl.innerHTML = '<div class="revert-reason">x402 payment required — $0.01 USDC on Base Sepolia</div>';
+      } else {
+        headerEl.className = `result-header ${data.success ? 'success' : 'fail'}`;
+        headerEl.textContent = data.success ? '✓ Transaction will succeed' : '✗ Transaction will revert';
+
+        let html = '';
+
+        if (data.gasEstimate !== null) {
+          html += row('Gas estimate', data.gasEstimate.toLocaleString() + ' gas');
+          html += row('Gas cost (ETH)', data.gasCostETH ?? '—');
+        }
+
+        html += row('Logs emitted', data.logs.length > 0 ? `${data.logs.length} event(s)` : 'None');
+
+        if (!data.success && data.revertReason) {
+          html += `<div class="revert-reason">${escHtml(data.revertReason)}</div>`;
+        }
+
+        html += `<div class="timestamp">Simulated at ${new Date(data.simulatedAt).toLocaleTimeString()}</div>`;
+        bodyEl.innerHTML = html;
+      }
+
+      resultEl.classList.add('visible');
+    } catch (err) {
+      headerEl.className = 'result-header fail';
+      headerEl.textContent = '✗ Request failed';
+      bodyEl.innerHTML = `<div class="revert-reason">${escHtml(err.message)}</div>`;
+      resultEl.classList.add('visible');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Simulate Transaction';
+    }
+  });
+
+  function row(key, val) {
+    return `<div class="result-row"><span class="key">${key}</span><span class="val">${escHtml(String(val))}</span></div>`;
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+</script>
+</body>
+</html>
