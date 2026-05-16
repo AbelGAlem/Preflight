@@ -1,0 +1,38 @@
+### Health check
+GET http://localhost:3000/health
+
+### Simulate — success (Vitalik sends 100 USDC)
+POST http://localhost:3000/simulate
+Content-Type: application/json
+
+{
+  "from": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "data": "0xa9059cbb000000000000000000000000ab5801a7d398351b8be11c439e05c5b3259aec9b0000000000000000000000000000000000000000000000000000000005f5e100",
+  "value": "0",
+  "chainId": 1
+}
+
+### Simulate — fail (empty wallet tries to send USDC)
+POST http://localhost:3000/simulate
+Content-Type: application/json
+
+{
+  "from": "0x0000000000000000000000000000000000000001",
+  "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "data": "0xa9059cbb000000000000000000000000ab5801a7d398351b8be11c439e05c5b3259aec9b0000000000000000000000000000000000000000000000000000000005f5e100",
+  "value": "0",
+  "chainId": 1
+}
+
+### Simulate — invalid request (bad address, triggers Zod validation)
+POST http://localhost:3000/simulate
+Content-Type: application/json
+
+{
+  "from": "not-an-address",
+  "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "data": "0x",
+  "value": "0",
+  "chainId": 1
+}
