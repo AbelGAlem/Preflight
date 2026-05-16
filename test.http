@@ -36,3 +36,52 @@ Content-Type: application/json
   "value": "0",
   "chainId": 1
 }
+
+### MCP — initialize
+POST http://localhost:3000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "protocolVersion": "2024-11-05",
+    "capabilities": {},
+    "clientInfo": { "name": "test-client", "version": "1.0.0" }
+  }
+}
+
+### MCP — list tools
+POST http://localhost:3000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/list",
+  "params": {}
+}
+
+### MCP — call preflight_simulate
+POST http://localhost:3000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 3,
+  "method": "tools/call",
+  "params": {
+    "name": "preflight_simulate",
+    "arguments": {
+      "from": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+      "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+      "data": "0xa9059cbb000000000000000000000000ab5801a7d398351b8be11c439e05c5b3259aec9b0000000000000000000000000000000000000000000000000000000005f5e100",
+      "value": "0",
+      "chainId": 1
+    }
+  }
+}

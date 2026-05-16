@@ -4,6 +4,7 @@ const path = require('path');
 const { PORT } = require('./config');
 const { payment } = require('./middleware/payment');
 const simulateRouter = require('./routes/simulate');
+const { createMcpRouter } = require('./mcp/server');
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.get('/health', (req, res) => {
 
 app.use(payment);
 app.use('/simulate', simulateRouter);
+app.use('/mcp', createMcpRouter());
 
 app.listen(PORT, () => {
   console.log(`PreFlight running on port ${PORT}`);
