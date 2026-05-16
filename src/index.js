@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const { PORT } = require('./config');
+const { payment } = require('./middleware/payment');
 const simulateRouter = require('./routes/simulate');
 
 const app = express();
@@ -14,6 +15,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: '1.0.0' });
 });
 
+app.use(payment);
 app.use('/simulate', simulateRouter);
 
 app.listen(PORT, () => {
