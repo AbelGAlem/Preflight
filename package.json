@@ -5,7 +5,8 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon src/index.js",
+    "test:paid": "node scripts/test-paid.mjs"
   },
   "engines": {
     "node": ">=18"
@@ -15,6 +16,7 @@
     "axios": "^1.6.0",
     "x402-express": "latest",
     "x402-axios": "latest",
+    "viem": "^2.21.26",
     "@modelcontextprotocol/sdk": "latest",
     "zod": "^3.22.0",
     "dotenv": "^16.3.1",

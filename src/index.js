@@ -16,6 +16,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', version: '1.0.0' });
 });
 
+app.use('/preview', simulateRouter);
 app.use(payment);
 app.use('/simulate', simulateRouter);
 app.use('/mcp', createMcpRouter());
