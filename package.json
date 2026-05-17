@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test:paid": "node scripts/test-paid.mjs"
+    "test:rules": "node scripts/test-preflight-rules.mjs",
+    "test:paid": "node scripts/test-paid.mjs",
+    "test:mcp:simulate": "node scripts/test-mcp-paid.mjs",
+    "test:mcp:assess": "node scripts/test-mcp-assess-paid.mjs"
   },
   "engines": {
     "node": ">=18"

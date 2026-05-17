@@ -1,134 +1,185 @@
-# PreFlight ✈️
+# PreFlight
 
-**Simulate before you transact.** Dry-run any blockchain transaction and get back whether it will succeed, the gas cost in USD, the events it will emit, and the exact revert reason if it would fail — *before* you spend a cent of gas on-chain.
+Simulate before you transact. PreFlight dry-runs blockchain transactions and returns whether they will succeed, gas estimates, native/USD gas cost, emitted logs, and revert reasons before gas is spent on-chain.
 
-PreFlight is a **pay-per-use API**: no accounts, no API keys. Each paid call settles a ~$0.01 USDC micropayment via [x402](https://www.x402.org/) (HTTP 402 + on-chain settlement). It also exposes an **MCP server**, so autonomous AI agents can pay-per-call to sanity-check transactions before broadcasting them.
+PreFlight is pay-per-use for production paths: paid REST and paid MCP tool calls settle a small USDC payment through x402. The free `/preview` path exists for the web UI and local smoke testing.
 
----
+## Surfaces
 
-## Why
+| Surface | Payment | Purpose |
+| --- | --- | --- |
+| `GET /health` | Free | Health check |
+| `POST /preview` | Free | UI/local preview path |
+| `POST /simulate` | x402 paid | REST simulation API |
+| `POST /mcp` `initialize` / `tools/list` | Free | MCP discovery |
+| `POST /mcp` `tools/call preflight_simulate` | x402 paid | Agent simulation tool |
+| `POST /mcp` `tools/call preflight_assess` | x402 paid | Agent decision tool |
 
-Every reverted transaction is wasted gas and a bad user/agent experience. Wallets and agents *should* dry-run first, but most don't because there's no frictionless, payable, agent-native way to do it. PreFlight is that: one HTTP call, one micropayment, instant verdict — and an MCP tool an agent can call autonomously.
+Supported transaction simulation chains:
 
-## How it works
+- Ethereum: `chainId` `1`
+- Base: `chainId` `8453`
+- Polygon: `chainId` `137`
 
-```
-client / agent ──POST {from,to,data,value,chainId}──▶ PreFlight
-                                                          │
-                                              x402 payment (USDC on Base)
-                                                          │
-                                              Tenderly tenderly_simulateTransaction
-                                                          │
-                                              + live USD gas pricing (CoinGecko)
-                                                          ▼
-        { success, gasEstimate, gasCostNative, gasCostUSD, logs, revertReason }
-```
-
-Three surfaces, one simulation engine:
-
-| Endpoint | Payment | Use |
-|---|---|---|
-| `POST /preview` | **Free** | Powers the web UI; quick testing |
-| `POST /simulate` | **Paid** (x402) | Production REST integration |
-| `POST /mcp` | **Paid** per `tools/call` | AI agents (`preflight_simulate` tool); discovery is free |
-
-Supported chains: Ethereum (`1`), Base (`8453`), Polygon (`137`).
-
-## Quick start
+## Quick Start
 
 ```bash
-git clone https://github.com/AbelGAlem/Preflight
-cd Preflight
 npm install
-cp .env.example .env      # then fill in TENDERLY_NODE_ACCESS_KEY + WALLET_ADDRESS
-npm start                 # http://localhost:3000
+cp .env.example .env
+npm start
 ```
 
-Minimum required env to run the free path: `TENDERLY_NODE_ACCESS_KEY`. To enable paid routes, also set `WALLET_ADDRESS` and `PAYMENT_NETWORK`.
+Minimum free-preview config:
 
-### Environment variables
-
-```
-TENDERLY_NODE_ACCESS_KEY=   # dashboard.tenderly.co → Node → key after the last slash of the HTTPS URL
-WALLET_ADDRESS=             # Base wallet that RECEIVES x402 payments
-PRICE_PER_REQUEST=0.01      # USD per paid call
-PAYMENT_NETWORK=base-sepolia # base-sepolia for testing, base for production
-PAYMENT_FACILITATOR_URL=    # optional; blank = x402 default facilitator
+```env
+TENDERLY_NODE_ACCESS_KEY=
 PORT=3000
 NODE_ENV=development
 ```
 
-For the paid smoke tests only, also set `PAYER_PRIVATE_KEY` to a **funded test wallet** key (Base Sepolia USDC) — never your receiving wallet's key.
+Paid x402 config:
 
-## Demo
-
-### 1. Web UI — no wallet, instant
-
-```bash
-npm start
+```env
+WALLET_ADDRESS=             # receiving wallet
+PRICE_PER_REQUEST=0.01
+PAYMENT_NETWORK=base-sepolia
+PAYMENT_FACILITATOR_URL=    # optional; blank uses package default
 ```
-Open <http://localhost:3000>, click **Load success example** (wraps 0.1 ETH → WETH) or **Load fail example** (bad selector on USDC), then **Simulate**. Green = will succeed (with USD gas cost); red = will revert (with reason). This uses the free `/preview` path.
 
-### 2. Paid REST — the x402 money flow
+Paid smoke-test config:
 
-Set `PAYER_PRIVATE_KEY` (funded Base Sepolia wallet) in `.env`, then:
-```bash
-npm run test:paid
+```env
+PAYER_PRIVATE_KEY=          # funded test wallet private key; never use a main wallet
+PREFLIGHT_URL=http://localhost:3000
 ```
-You'll see: `402 → auto-pay → Payment accepted: true`, the on-chain settlement response, and the simulation result. A real micropayment just happened.
 
-### 3. Paid MCP — an AI agent paying per call
+For Base Sepolia x402 tests, the payer needs test USDC and gas on Base Sepolia.
 
-```bash
-node scripts/test-mcp-paid.mjs
-```
-The agent does free discovery (`initialize`, `tools/list`), then pays $0.01 on `tools/call preflight_simulate`. Point any MCP client (e.g. Claude Desktop) at `http://localhost:3000/mcp` for a live agent demo.
+## Response Shapes
 
-## API
-
-### `POST /preview` · `POST /simulate`
+### `POST /preview` and `POST /simulate`
 
 Request:
+
 ```json
 {
   "from": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-  "to":   "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-  "data": "0xa9059cbb...",
+  "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "data": "0x",
   "value": "0",
   "chainId": 1
 }
 ```
-`data` defaults to `0x`, `value` is a wei string defaulting to `0`. Bodies are validated with Zod (HTTP 400 on invalid input).
 
 Response:
+
 ```json
 {
   "success": true,
-  "gasEstimate": 51000,
+  "gasEstimate": 21000,
   "nativeToken": "ETH",
-  "gasCostNative": "0.00010200",
-  "gasCostUSD": "0.3400",
-  "logs": [{ "address": "0x…", "topics": ["0x…"], "data": "0x…" }],
+  "gasCostNative": "0.00042000",
+  "gasCostUSD": "1.0000",
+  "logs": [],
   "revertReason": null,
-  "simulatedAt": "2026-05-17T12:00:00.000Z"
+  "simulatedAt": "2026-05-17T00:00:00.000Z"
 }
 ```
-On a reverting tx: `success: false` and `revertReason` is populated. Upstream/service errors return HTTP 502 with the same shape; unpaid calls to `/simulate` return HTTP 402.
 
-### `POST /mcp`
+Validation errors return `400` on `/preview`. Unpaid `/simulate` returns `402` before validation.
 
-Standard MCP over Streamable HTTP. `initialize` and `tools/list` are free. The `preflight_simulate` tool takes the same arguments as above and is billed per `tools/call` via x402.
+### MCP `preflight_simulate`
 
-### `GET /health`
+Takes the same transaction arguments and returns the same simulation object as text content in the MCP tool result. It is paid only when called through `tools/call`; `initialize` and `tools/list` are free.
 
-`{ "status": "ok", "version": "1.0.0" }`
+### MCP `preflight_assess`
 
-`test.http` contains runnable examples for every endpoint (success, fail, validation error, and the full MCP handshake).
+Takes the same transaction arguments and returns:
 
-## Tech stack
+```json
+{
+  "decision": "proceed",
+  "riskLevel": "low",
+  "reason": "The transaction simulation succeeded and the estimated cost is within the review thresholds.",
+  "recommendation": "Proceed if the transaction intent and recipient are correct.",
+  "simulation": {
+    "success": true,
+    "gasEstimate": 21000,
+    "nativeToken": "ETH",
+    "gasCostNative": "0.00042000",
+    "gasCostUSD": "1.0000",
+    "logs": [],
+    "revertReason": null,
+    "simulatedAt": "2026-05-17T00:00:00.000Z"
+  }
+}
+```
 
-Node + Express · [Tenderly](https://tenderly.co/) simulation RPC · [x402](https://www.x402.org/) (`x402-express` / `x402-axios`) for HTTP-native payments · [Model Context Protocol SDK](https://modelcontextprotocol.io/) · `viem` · Zod · CoinGecko (live USD gas pricing) · vanilla HTML/CSS/JS frontend · Railway deploy.
+Assessment rules:
+
+- Failed simulation: `decision="abort"`, `riskLevel="high"`
+- Missing `gasEstimate`: `decision="review"`, `riskLevel="medium"`
+- `gasEstimate > 500000`: `decision="review"`, `riskLevel="medium"`
+- `gasCostUSD > 10`: `decision="review"`, `riskLevel="medium"`
+- Otherwise: `decision="proceed"`, `riskLevel="low"`
+
+## Testing
+
+Run syntax checks:
+
+```bash
+node --check src/services/preflight.js
+node --check src/routes/simulate.js
+node --check src/mcp/server.js
+node --check src/middleware/payment.js
+```
+
+Run deterministic assessment-rule tests:
+
+```bash
+npm run test:rules
+```
+
+Run paid REST smoke test:
+
+```bash
+npm run test:paid
+```
+
+Run paid MCP assessment smoke test:
+
+```bash
+npm run test:mcp:simulate
+npm run test:mcp:assess
+```
+
+`test.http` contains manual cases for:
+
+- `GET /health`
+- Free `/preview` success/fail
+- Free `/preview` validation failures
+- Unpaid `/simulate` returning `402`
+- Free MCP `initialize`
+- Free MCP `tools/list`
+- Unpaid MCP `preflight_simulate` returning `402`
+- Unpaid MCP `preflight_assess` returning `402`
+
+## Architecture
+
+```text
+src/
+  index.js                 Express app and route mounting
+  config.js                Environment configuration
+  routes/simulate.js       REST preview/simulate route handler
+  services/tenderly.js     Tenderly RPC integration
+  services/ethPrice.js     Native token USD pricing
+  services/preflight.js    Shared pricing and assessment logic
+  middleware/payment.js    x402 payment gating for paid REST/MCP calls
+  mcp/server.js            MCP tools
+public/index.html          Vanilla web UI
+scripts/                   Paid and deterministic smoke tests
+```
 
 ## Deployment
 
-`railway.toml` is preconfigured (nixpacks, `npm start`, restart-on-failure). Push to Railway, set the env vars in the dashboard, and for production use `PAYMENT_NETWORK=base` and `NODE_ENV=production`.
+`railway.toml` is configured for Railway. Set the environment variables in Railway, use `PAYMENT_NETWORK=base` for production, and keep test private keys out of production environments.

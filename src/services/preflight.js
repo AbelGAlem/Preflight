@@ -1,10 +1,13 @@
 const { simulateTransaction } = require('./tenderly');
 const { getNativePriceUSD } = require('./ethPrice');
 
+const GAS_REVIEW_THRESHOLD = 500000;
+const USD_REVIEW_THRESHOLD = 10;
+
 async function simulateWithPricing(transaction) {
   const result = await simulateTransaction(transaction);
 
-  const gasCostNative = result.gasEstimate && result.effectiveGasPrice
+  const gasCostNative = result.gasEstimate != null && result.effectiveGasPrice != null
     ? ((result.gasEstimate * result.effectiveGasPrice) / 1e18).toFixed(8)
     : null;
 
@@ -46,7 +49,7 @@ function assessSimulation(simulation) {
     };
   }
 
-  if (simulation.gasEstimate > 500000) {
+  if (simulation.gasEstimate > GAS_REVIEW_THRESHOLD) {
     return {
       decision: 'review',
       riskLevel: 'medium',
@@ -57,7 +60,7 @@ function assessSimulation(simulation) {
   }
 
   const gasCostUSD = simulation.gasCostUSD == null ? null : Number(simulation.gasCostUSD);
-  if (gasCostUSD != null && Number.isFinite(gasCostUSD) && gasCostUSD > 10) {
+  if (gasCostUSD != null && Number.isFinite(gasCostUSD) && gasCostUSD > USD_REVIEW_THRESHOLD) {
     return {
       decision: 'review',
       riskLevel: 'medium',
