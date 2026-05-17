@@ -30,6 +30,31 @@ function toHex(value) {
   return '0x' + BigInt(value || 0).toString(16);
 }
 
+// On a revert Tenderly leaves the top level empty and spreads the reason
+// across flat trace frames: one frame carries the specific message in
+// `error` while another has a generic `error` plus the decoded reason in
+// `errorReason`. Depth is not a reliable signal, so collect every candidate
+// (decoded `errorReason` first, then `error`, then any top-level fields) and
+// return the first that isn't a generic placeholder.
+const GENERIC_REVERTS = new Set(['execution reverted', 'reverted', 'transaction reverted']);
+
+function extractRevertReason(result) {
+  const frames = Array.isArray(result.trace) ? result.trace : [];
+
+  const candidates = [
+    ...frames.map((f) => f.errorReason),
+    ...frames.map((f) => f.error),
+    result.error?.data?.message,
+    result.error?.message,
+    typeof result.error === 'string' ? result.error : undefined,
+    result.revertReason,
+    result.errorMessage,
+  ].filter((c) => typeof c === 'string' && c.trim().length > 0);
+
+  const specific = candidates.find((c) => !GENERIC_REVERTS.has(c.trim().toLowerCase()));
+  return specific || candidates[0] || 'Transaction reverted';
+}
+
 async function simulateTransaction({ from, to, data, value, chainId }) {
   const rpcUrl = getRpcUrl(chainId);
   let response;
@@ -66,9 +91,7 @@ async function simulateTransaction({ from, to, data, value, chainId }) {
     ? parseInt(result.effectiveGasPrice, 16)
     : GAS_PRICE_FALLBACKS[chainId] || 20e9;
 
-  const revertReason = !success
-    ? (result.error?.message || result.error?.data?.message || result.revertReason || result.errorMessage || 'Transaction reverted')
-    : null;
+  const revertReason = !success ? extractRevertReason(result) : null;
 
   const logs = (result.logs || []).map((log) => ({
     address: log.address,

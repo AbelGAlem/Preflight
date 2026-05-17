@@ -6,6 +6,7 @@ module.exports = {
   PRICE_PER_REQUEST: process.env.PRICE_PER_REQUEST || '0.01',
   PAYMENT_NETWORK: process.env.PAYMENT_NETWORK || 'base-sepolia',
   PAYMENT_FACILITATOR_URL: process.env.PAYMENT_FACILITATOR_URL || '',
+  COINGECKO_API_KEY: process.env.COINGECKO_API_KEY || '',
   PORT: process.env.PORT || 3000,
   NODE_ENV: process.env.NODE_ENV || 'development',
 };

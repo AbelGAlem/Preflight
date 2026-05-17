@@ -76,10 +76,11 @@ try {
   const callResp = await paid.post('/mcp', rpc(3, 'tools/call', {
     name: 'preflight_simulate',
     arguments: {
+      // Wrap 0.1 ETH into WETH — Tenderly confirms this returns status:true.
       from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
-      to: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-      data: '0xa9059cbb000000000000000000000000ab5801a7d398351b8be11c439e05c5b3259aec9b0000000000000000000000000000000000000000000000000000000005f5e100',
-      value: '0',
+      to: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+      data: '0xd0e30db0',
+      value: '100000000000000000',
       chainId: 1,
     },
   }), { headers: mcpHeaders });
