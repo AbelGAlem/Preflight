@@ -4,13 +4,37 @@ const { simulateWithPricing } = require('../services/preflight');
 
 const router = express.Router();
 
+const chainIdSchema = z.union([
+  z.literal(1),
+  z.literal('1'),
+  z.literal(11155111),
+  z.literal('11155111'),
+  z.literal(8453),
+  z.literal('8453'),
+  z.literal(137),
+  z.literal('137'),
+]);
+
+const valueSchema = z.union([
+  z.string().regex(/^\d+$/, 'Value must be a non-negative integer string in wei'),
+  z.number().int().nonnegative(),
+]).default('0');
+
 const SimulateSchema = z.object({
   from: z.string().regex(/^0x[0-9a-fA-F]{40}$/, 'Invalid from address'),
   to: z.string().regex(/^0x[0-9a-fA-F]{40}$/, 'Invalid to address'),
   data: z.string().regex(/^0x[0-9a-fA-F]*$/, 'Invalid hex data').optional().default('0x'),
-  value: z.string().regex(/^\d+$/, 'Value must be a non-negative integer string in wei').default('0'),
-  chainId: z.union([z.literal(1), z.literal(8453), z.literal(137)]),
+  value: valueSchema,
+  chainId: chainIdSchema,
 });
+
+function normalizeTransaction(transaction) {
+  return {
+    ...transaction,
+    value: String(transaction.value),
+    chainId: Number(transaction.chainId),
+  };
+}
 
 router.post('/', async (req, res) => {
   const parsed = SimulateSchema.safeParse(req.body);
@@ -19,7 +43,7 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const result = await simulateWithPricing(parsed.data);
+    const result = await simulateWithPricing(normalizeTransaction(parsed.data));
     res.json(result);
   } catch (err) {
     res.status(502).json({
