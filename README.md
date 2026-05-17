@@ -17,14 +17,15 @@ PreFlight is pay-per-use for production paths: paid REST and paid MCP tool calls
 
 Supported transaction simulation chains:
 
-- Ethereum: `chainId` `1`
-- Base: `chainId` `8453`
+- Ethereum mainnet: `chainId` `1`
+- Ethereum Sepolia: `chainId` `11155111`
+- Base mainnet: `chainId` `8453`
 - Polygon: `chainId` `137`
 
 ## Limitations
 
 - PreFlight simulates transactions; it does not broadcast them.
-- x402 payment can run on Base Sepolia for testing, but transaction simulation currently supports Ethereum mainnet, Base mainnet, and Polygon only.
+- x402 payment can run on Base Sepolia for testing. Transaction simulation supports Ethereum mainnet, Ethereum Sepolia, Base mainnet, and Polygon.
 - USD gas cost is estimated from CoinGecko when available and falls back to approximate prices if unavailable.
 - The `preflight_assess` decision is rule-based. It is a safety pre-check, not a full contract audit.
 
@@ -92,6 +93,20 @@ Response:
   "simulatedAt": "2026-05-17T00:00:00.000Z"
 }
 ```
+
+### Example: Sepolia wallet-to-wallet transfer
+
+```json
+{
+  "from": "0x1ad4C9d7CEa32B44cd54260A52C57B6Ce4e0D6eB",
+  "to": "0x8E159C52Dc2823cB6728E26898A2bABC286BBAc7",
+  "data": "0x",
+  "value": "1000000000000000",
+  "chainId": 11155111
+}
+```
+
+This simulates a native Sepolia ETH transfer of `0.001 ETH`. It does not broadcast the transfer.
 
 Validation errors return `400` on `/preview`. Unpaid `/simulate` returns `402` before validation.
 
@@ -170,6 +185,62 @@ npm run test:mcp:assess
 - Free MCP `tools/list`
 - Unpaid MCP `preflight_simulate` returning `402`
 - Unpaid MCP `preflight_assess` returning `402`
+
+## Claude Desktop MCP demo
+
+PreFlight's hosted `/mcp` endpoint is x402-paid. Claude Desktop does not pay x402 directly, so the demo uses a local MCP stdio bridge that pays the x402 challenge and forwards results back to Claude.
+
+Architecture:
+
+```text
+Claude Desktop -> local MCP bridge -> x402-paid PreFlight /mcp -> Tenderly
+```
+
+Start PreFlight:
+
+```bash
+npm start
+```
+
+Validate the paid MCP path:
+
+```bash
+npm run test:mcp:assess
+```
+
+Add this to Claude Desktop config:
+
+```json
+{
+  "mcpServers": {
+    "preflight": {
+      "command": "node",
+      "args": [
+        "D:\\br br patapim\\Preflight\\scripts\\claude-preflight-bridge.mjs"
+      ],
+      "cwd": "D:\\br br patapim\\Preflight"
+    }
+  }
+}
+```
+
+Restart Claude Desktop after editing the config.
+
+Example Claude prompt:
+
+```text
+Use PreFlight to assess this transaction before broadcast:
+
+from: 0x1ad4C9d7CEa32B44cd54260A52C57B6Ce4e0D6eB
+to: 0x8E159C52Dc2823cB6728E26898A2bABC286BBAc7
+data: 0x
+value: 1000000000000000
+chainId: 11155111
+
+Tell me whether I should proceed, review, or abort.
+```
+
+Important: Claude is not paying x402 directly. The local MCP bridge pays using the configured test wallet.
 
 ## Architecture
 

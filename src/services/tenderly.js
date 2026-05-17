@@ -3,12 +3,14 @@ const { TENDERLY_NODE_ACCESS_KEY } = require('../config');
 
 const NETWORK_PREFIXES = {
   1: 'mainnet',
+  11155111: 'sepolia',
   8453: 'base',
   137: 'polygon',
 };
 
 const NATIVE_TOKENS = {
   1: 'ETH',
+  11155111: 'ETH',
   8453: 'ETH',
   137: 'MATIC',
 };
@@ -16,6 +18,7 @@ const NATIVE_TOKENS = {
 // Fallback gas prices in wei when Tenderly doesn't return effectiveGasPrice
 const GAS_PRICE_FALLBACKS = {
   1: 20e9,    // 20 gwei — Ethereum
+  11155111: 2e9,
   8453: 5e6,  // 0.005 gwei — Base L2
   137: 50e9,  // 50 gwei — Polygon
 };

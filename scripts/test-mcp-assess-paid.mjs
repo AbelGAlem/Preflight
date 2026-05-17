@@ -93,6 +93,14 @@ const paid = withPaymentInterceptor(axios.create({ baseURL, proxy: false }), wal
 
 const rpc = (id, method, params) => ({ jsonrpc: '2.0', id, method, params });
 
+const testTransaction = {
+  from: process.env.TEST_TX_FROM || '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+  to: process.env.TEST_TX_TO || '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+  data: process.env.TEST_TX_DATA || '0xd0e30db0',
+  value: process.env.TEST_TX_VALUE || '100000000000000000',
+  chainId: Number(process.env.TEST_TX_CHAIN_ID || 1),
+};
+
 try {
   console.log(`MCP target: ${baseURL}/mcp  payer: ${account.address}  network: ${paymentNetwork}\n`);
 
@@ -116,14 +124,7 @@ try {
   console.log('3. tools/call preflight_assess (paid - expect 402 then auto-pay)...');
   const callResp = await paid.post('/mcp', rpc(3, 'tools/call', {
     name: 'preflight_assess',
-    arguments: {
-      // Wrap 0.1 ETH into WETH - expected to succeed.
-      from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
-      to: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
-      data: '0xd0e30db0',
-      value: '100000000000000000',
-      chainId: 1,
-    },
+    arguments: testTransaction,
   }), { headers: mcpHeaders });
 
   const paymentResponseHeader = callResp.headers['x-payment-response'];

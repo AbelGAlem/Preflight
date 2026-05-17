@@ -25,6 +25,18 @@ Content-Type: application/json
   "chainId": 1
 }
 
+### Preview - Sepolia native ETH transfer between two wallets
+POST http://localhost:3000/preview
+Content-Type: application/json
+
+{
+  "from": "0x1ad4C9d7CEa32B44cd54260A52C57B6Ce4e0D6eB",
+  "to": "0x8E159C52Dc2823cB6728E26898A2bABC286BBAc7",
+  "data": "0x",
+  "value": "1000000000000000",
+  "chainId": 11155111
+}
+
 ### Preview - invalid address (expected 400)
 POST http://localhost:3000/preview
 Content-Type: application/json
@@ -105,6 +117,26 @@ Accept: application/json, text/event-stream
   }
 }
 
+### MCP - unpaid preflight_assess Sepolia transfer (expected 402)
+POST http://localhost:3000/mcp
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{
+  "jsonrpc": "2.0",
+  "id": 5,
+  "method": "tools/call",
+  "params": {
+    "name": "preflight_assess",
+    "arguments": {
+      "from": "0x1ad4C9d7CEa32B44cd54260A52C57B6Ce4e0D6eB",
+      "to": "0x8E159C52Dc2823cB6728E26898A2bABC286BBAc7",
+      "data": "0x",
+      "value": "1000000000000000",
+      "chainId": 11155111
+    }
+  }
+}
 ### Paid MCP assess smoke
 # Run from PowerShell instead of pasting X-PAYMENT manually:
 # npm run test:mcp:assess
