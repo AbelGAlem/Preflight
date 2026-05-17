@@ -9,8 +9,8 @@ const SimulateSchema = z.object({
   from: z.string().regex(/^0x[0-9a-fA-F]{40}$/, 'Invalid from address'),
   to: z.string().regex(/^0x[0-9a-fA-F]{40}$/, 'Invalid to address'),
   data: z.string().regex(/^0x[0-9a-fA-F]*$/, 'Invalid hex data').optional().default('0x'),
-  value: z.string().default('0'),
-  chainId: z.number().int().positive(),
+  value: z.string().regex(/^\d+$/, 'Value must be a non-negative integer string in wei').default('0'),
+  chainId: z.union([z.literal(1), z.literal(8453), z.literal(137)]),
 });
 
 router.post('/', async (req, res) => {

@@ -19,11 +19,11 @@ function createMcpRouter() {
       'preflight_simulate',
       `Simulate a blockchain transaction before sending it on-chain. Returns whether it will succeed, estimated gas cost in USD, emitted events, and revert reason if it would fail. Use this before submitting any transaction to avoid wasted gas fees. Paid tool: each call costs $${String(PRICE_PER_REQUEST).replace(/^\$/, '')} settled via x402 on ${PAYMENT_NETWORK}; the call returns HTTP 402 with payment requirements until a valid X-PAYMENT proof is supplied.`,
       {
-        from: z.string().describe('Wallet address initiating the transaction'),
-        to: z.string().describe('Contract or wallet address receiving the transaction'),
-        data: z.string().optional().default('0x').describe('ABI-encoded function call in hex'),
-        value: z.string().optional().default('0').describe('Amount of ETH in wei'),
-        chainId: z.number().int().positive().describe('Blockchain network (1=Ethereum, 8453=Base, 137=Polygon)'),
+        from: z.string().regex(/^0x[0-9a-fA-F]{40}$/, 'Invalid from address').describe('Wallet address initiating the transaction'),
+        to: z.string().regex(/^0x[0-9a-fA-F]{40}$/, 'Invalid to address').describe('Contract or wallet address receiving the transaction'),
+        data: z.string().regex(/^0x[0-9a-fA-F]*$/, 'Invalid hex data').optional().default('0x').describe('ABI-encoded function call in hex'),
+        value: z.string().regex(/^\d+$/, 'Value must be a non-negative integer string in wei').optional().default('0').describe('Amount of ETH in wei'),
+        chainId: z.union([z.literal(1), z.literal(8453), z.literal(137)]).describe('Blockchain network (1=Ethereum, 8453=Base, 137=Polygon)'),
       },
       async ({ from, to, data, value, chainId }) => {
         try {
