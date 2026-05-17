@@ -1,7 +1,6 @@
 const express = require('express');
 const { z } = require('zod');
-const { simulateTransaction } = require('../services/tenderly');
-const { getNativePriceUSD } = require('../services/ethPrice');
+const { simulateWithPricing } = require('../services/preflight');
 
 const router = express.Router();
 
@@ -20,32 +19,14 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    const result = await simulateTransaction(parsed.data);
-
-    const gasCostNative = result.gasEstimate && result.effectiveGasPrice
-      ? ((result.gasEstimate * result.effectiveGasPrice) / 1e18).toFixed(8)
-      : null;
-
-    const nativePrice = await getNativePriceUSD(result.nativeToken);
-    const gasCostUSD = gasCostNative && nativePrice
-      ? (parseFloat(gasCostNative) * nativePrice).toFixed(4)
-      : null;
-
-    res.json({
-      success: result.success,
-      gasEstimate: result.gasEstimate,
-      nativeToken: result.nativeToken,
-      gasCostNative,
-      gasCostUSD,
-      logs: result.logs,
-      revertReason: result.revertReason,
-      simulatedAt: new Date().toISOString(),
-    });
+    const result = await simulateWithPricing(parsed.data);
+    res.json(result);
   } catch (err) {
     res.status(502).json({
       success: false,
       gasEstimate: null,
-      gasCostETH: null,
+      nativeToken: null,
+      gasCostNative: null,
       gasCostUSD: null,
       logs: [],
       revertReason: err.message,
