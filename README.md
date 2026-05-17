@@ -1,6 +1,6 @@
 # PreFlight
 
-Simulate before you transact. PreFlight dry-runs blockchain transactions and returns whether they will succeed, gas estimates, native/USD gas cost, emitted logs, and revert reasons before gas is spent on-chain.
+Simulate before you transact. PreFlight dry-runs blockchain transactions before they are broadcast and returns either a raw simulation result or an agent-friendly proceed/review/abort assessment.
 
 PreFlight is pay-per-use for production paths: paid REST and paid MCP tool calls settle a small USDC payment through x402. The free `/preview` path exists for the web UI and local smoke testing.
 
@@ -20,6 +20,13 @@ Supported transaction simulation chains:
 - Ethereum: `chainId` `1`
 - Base: `chainId` `8453`
 - Polygon: `chainId` `137`
+
+## Limitations
+
+- PreFlight simulates transactions; it does not broadcast them.
+- x402 payment can run on Base Sepolia for testing, but transaction simulation currently supports Ethereum mainnet, Base mainnet, and Polygon only.
+- USD gas cost is estimated from CoinGecko when available and falls back to approximate prices if unavailable.
+- The `preflight_assess` decision is rule-based. It is a safety pre-check, not a full contract audit.
 
 ## Quick Start
 
