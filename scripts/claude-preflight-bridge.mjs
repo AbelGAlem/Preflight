@@ -1,5 +1,7 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import axios from 'axios';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { createWalletClient, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { base, baseSepolia } from 'viem/chains';
@@ -7,6 +9,9 @@ import { withPaymentInterceptor } from 'x402-axios';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+
+const scriptDir = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(scriptDir, '..', '.env') });
 
 const payerPrivateKey = process.env.PAYER_PRIVATE_KEY;
 const paymentNetwork = process.env.PAYMENT_NETWORK || 'base-sepolia';
@@ -167,8 +172,26 @@ server.tool(
 );
 
 server.tool(
+  'assess',
+  'Assess a blockchain transaction with PreFlight before broadcast. The bridge pays x402 and returns a proceed, review, or abort decision.',
+  transactionSchema,
+  async (args) => {
+    return callPaidPreflightTool('preflight_assess', args);
+  }
+);
+
+server.tool(
   'preflight_simulate_paid',
   'Pay x402 and ask PreFlight to simulate a blockchain transaction before broadcast.',
+  transactionSchema,
+  async (args) => {
+    return callPaidPreflightTool('preflight_simulate', args);
+  }
+);
+
+server.tool(
+  'simulate',
+  'Simulate a blockchain transaction with PreFlight before broadcast. The bridge pays x402 and returns the raw simulation result.',
   transactionSchema,
   async (args) => {
     return callPaidPreflightTool('preflight_simulate', args);
