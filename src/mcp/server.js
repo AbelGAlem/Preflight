@@ -2,6 +2,8 @@ const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { z } = require('zod');
 const { simulateTransaction } = require('../services/tenderly');
+const { getNativePriceUSD } = require('../services/ethPrice');
+const { PRICE_PER_REQUEST, PAYMENT_NETWORK } = require('../config');
 
 function createMcpRouter() {
   const express = require('express');
@@ -15,7 +17,7 @@ function createMcpRouter() {
 
     server.tool(
       'preflight_simulate',
-      'Simulate a blockchain transaction before sending it on-chain. Returns whether it will succeed, estimated gas cost in USD, emitted events, and revert reason if it would fail. Use this before submitting any transaction to avoid wasted gas fees.',
+      `Simulate a blockchain transaction before sending it on-chain. Returns whether it will succeed, estimated gas cost in USD, emitted events, and revert reason if it would fail. Use this before submitting any transaction to avoid wasted gas fees. Paid tool: each call costs $${String(PRICE_PER_REQUEST).replace(/^\$/, '')} settled via x402 on ${PAYMENT_NETWORK}; the call returns HTTP 402 with payment requirements until a valid X-PAYMENT proof is supplied.`,
       {
         from: z.string().describe('Wallet address initiating the transaction'),
         to: z.string().describe('Contract or wallet address receiving the transaction'),
@@ -26,8 +28,13 @@ function createMcpRouter() {
       async ({ from, to, data, value, chainId }) => {
         try {
           const result = await simulateTransaction({ from, to, data, value, chainId });
-          const gasEstimateEth = result.gasEstimate
-            ? (result.gasEstimate * 12e-9).toFixed(6)
+          const gasCostNative = result.gasEstimate && result.effectiveGasPrice
+            ? ((result.gasEstimate * result.effectiveGasPrice) / 1e18).toFixed(8)
+            : null;
+
+          const nativePrice = await getNativePriceUSD(result.nativeToken);
+          const gasCostUSD = gasCostNative && nativePrice
+            ? (parseFloat(gasCostNative) * nativePrice).toFixed(4)
             : null;
 
           return {
@@ -37,7 +44,9 @@ function createMcpRouter() {
                 text: JSON.stringify({
                   success: result.success,
                   gasEstimate: result.gasEstimate,
-                  gasCostETH: gasEstimateEth,
+                  nativeToken: result.nativeToken,
+                  gasCostNative,
+                  gasCostUSD,
                   logs: result.logs,
                   revertReason: result.revertReason,
                   simulatedAt: new Date().toISOString(),

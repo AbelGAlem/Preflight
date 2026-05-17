@@ -1,6 +1,7 @@
 const express = require('express');
 const { z } = require('zod');
 const { simulateTransaction } = require('../services/tenderly');
+const { getNativePriceUSD } = require('../services/ethPrice');
 
 const router = express.Router();
 
@@ -21,15 +22,21 @@ router.post('/', async (req, res) => {
   try {
     const result = await simulateTransaction(parsed.data);
 
-    const gasEstimateEth = result.gasEstimate
-      ? (result.gasEstimate * 12e-9).toFixed(6)
+    const gasCostNative = result.gasEstimate && result.effectiveGasPrice
+      ? ((result.gasEstimate * result.effectiveGasPrice) / 1e18).toFixed(8)
+      : null;
+
+    const nativePrice = await getNativePriceUSD(result.nativeToken);
+    const gasCostUSD = gasCostNative && nativePrice
+      ? (parseFloat(gasCostNative) * nativePrice).toFixed(4)
       : null;
 
     res.json({
       success: result.success,
       gasEstimate: result.gasEstimate,
-      gasCostETH: gasEstimateEth,
-      gasCostUSD: null,
+      nativeToken: result.nativeToken,
+      gasCostNative,
+      gasCostUSD,
       logs: result.logs,
       revertReason: result.revertReason,
       simulatedAt: new Date().toISOString(),

@@ -3,6 +3,8 @@ const { WALLET_ADDRESS, PRICE_PER_REQUEST, PAYMENT_NETWORK, PAYMENT_FACILITATOR_
 
 const PROTECTED_METHOD = 'POST';
 const PROTECTED_PATH = '/simulate';
+const MCP_PATH = '/mcp';
+const PAID_MCP_TOOL = 'preflight_simulate';
 const SUPPORTED_NETWORKS = new Set(['base', 'base-sepolia']);
 const BASE64_PAYMENT_REGEX = /^[A-Za-z0-9+/]*={0,2}$/;
 
@@ -57,13 +59,23 @@ const routeConfig = {
         properties: {
           success: { type: 'boolean' },
           gasEstimate: { type: ['number', 'null'] },
-          gasCostETH: { type: ['string', 'null'] },
+          nativeToken: { type: ['string', 'null'] },
+          gasCostNative: { type: ['string', 'null'] },
           gasCostUSD: { type: ['string', 'null'] },
           logs: { type: 'array' },
           revertReason: { type: ['string', 'null'] },
           simulatedAt: { type: 'string' },
         },
       },
+    },
+  },
+  [MCP_PATH]: {
+    price: formatUsdPrice(PRICE_PER_REQUEST),
+    network: PAYMENT_NETWORK,
+    config: {
+      description: `Invoke the PreFlight ${PAID_MCP_TOOL} MCP tool (one paid simulation per tools/call)`,
+      mimeType: 'application/json',
+      maxTimeoutSeconds: 60,
     },
   },
 };
@@ -89,8 +101,26 @@ if (paymentConfigError) {
   paymentConfig.error = paymentConfigError;
 }
 
+// Only a JSON-RPC `tools/call` for the paid tool is billable. MCP discovery
+// (`initialize`, `tools/list`) and notifications stay free so agents — and the
+// x402 client wrappers that auto-pay — can complete the handshake unpaid.
+function isPaidMcpCall(body) {
+  const messages = Array.isArray(body) ? body : [body];
+  return messages.some(
+    (m) => m
+      && m.method === 'tools/call'
+      && m.params
+      && m.params.name === PAID_MCP_TOOL
+  );
+}
+
 function payment(req, res, next) {
-  if (req.method !== PROTECTED_METHOD || req.path !== PROTECTED_PATH) {
+  const isPaidRest = req.method === PROTECTED_METHOD && req.path === PROTECTED_PATH;
+  const isPaidMcp = req.method === PROTECTED_METHOD
+    && req.path === MCP_PATH
+    && isPaidMcpCall(req.body);
+
+  if (!isPaidRest && !isPaidMcp) {
     return next();
   }
 

@@ -7,6 +7,19 @@ const NETWORK_PREFIXES = {
   137: 'polygon',
 };
 
+const NATIVE_TOKENS = {
+  1: 'ETH',
+  8453: 'ETH',
+  137: 'MATIC',
+};
+
+// Fallback gas prices in wei when Tenderly doesn't return effectiveGasPrice
+const GAS_PRICE_FALLBACKS = {
+  1: 20e9,    // 20 gwei — Ethereum
+  8453: 5e6,  // 0.005 gwei — Base L2
+  137: 50e9,  // 50 gwei — Polygon
+};
+
 function getRpcUrl(chainId) {
   const prefix = NETWORK_PREFIXES[chainId];
   if (!prefix) throw new Error(`Unsupported chainId: ${chainId}`);
@@ -49,6 +62,9 @@ async function simulateTransaction({ from, to, data, value, chainId }) {
 
   const success = result.status === true || result.status === '0x1' || result.status === 1;
   const gasUsed = result.gasUsed ? parseInt(result.gasUsed, 16) : null;
+  const effectiveGasPrice = result.effectiveGasPrice
+    ? parseInt(result.effectiveGasPrice, 16)
+    : GAS_PRICE_FALLBACKS[chainId] || 20e9;
 
   const revertReason = !success
     ? (result.error?.message || result.error?.data?.message || result.revertReason || result.errorMessage || 'Transaction reverted')
@@ -63,6 +79,8 @@ async function simulateTransaction({ from, to, data, value, chainId }) {
   return {
     success,
     gasEstimate: gasUsed,
+    effectiveGasPrice,
+    nativeToken: NATIVE_TOKENS[chainId] || 'ETH',
     revertReason,
     logs,
   };

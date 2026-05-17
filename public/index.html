@@ -111,6 +111,32 @@
 
     select option { background: var(--surface); }
 
+    .wei-converter {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .wei-converter input {
+      flex: 1;
+      padding: 7px 10px;
+      font-size: 0.82rem;
+    }
+
+    .wei-converter-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .wei-equiv {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      min-height: 1em;
+    }
+
     .btn-simulate {
       width: 100%;
       padding: 12px;
@@ -127,6 +153,18 @@
 
     .btn-simulate:hover { background: var(--accent-hover); }
     .btn-simulate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .price-badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      padding: 2px 7px;
+      margin-left: 8px;
+      vertical-align: middle;
+      letter-spacing: 0.3px;
+    }
 
     .result {
       margin-top: 24px;
@@ -224,6 +262,11 @@
   <div class="form-group">
     <label for="value">Value (wei)</label>
     <input id="value" type="text" placeholder="0" />
+    <div class="wei-converter">
+      <input id="eth-input" type="number" placeholder="0.0" step="any" min="0" />
+      <span class="wei-converter-label">ETH → wei</span>
+    </div>
+    <span class="wei-equiv" id="wei-equiv"></span>
   </div>
 
   <div class="form-group">
@@ -235,7 +278,7 @@
     </select>
   </div>
 
-  <button class="btn-simulate" id="btn-simulate">Simulate Transaction</button>
+  <button class="btn-simulate" id="btn-simulate">Simulate Transaction <span class="price-badge">$0.01 USDC</span></button>
 
   <div class="result" id="result">
     <div class="result-header" id="result-header"></div>
@@ -272,6 +315,34 @@
 
   document.getElementById('btn-success').addEventListener('click', () => fillForm(DEMO_SUCCESS));
   document.getElementById('btn-fail').addEventListener('click', () => fillForm(DEMO_FAIL));
+
+  const WEI_PER_ETH = BigInt('1000000000000000000');
+
+  document.getElementById('eth-input').addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    if (!val || isNaN(val)) {
+      document.getElementById('value').value = '0';
+      document.getElementById('wei-equiv').textContent = '';
+      return;
+    }
+    // Convert ETH to wei using integer math to avoid float precision issues
+    const [whole, frac = ''] = val.split('.');
+    const fracPadded = frac.slice(0, 18).padEnd(18, '0');
+    const wei = BigInt(whole || '0') * WEI_PER_ETH + BigInt(fracPadded);
+    document.getElementById('value').value = wei.toString();
+    document.getElementById('wei-equiv').textContent = '';
+  });
+
+  document.getElementById('value').addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    const equiv = document.getElementById('wei-equiv');
+    document.getElementById('eth-input').value = '';
+    if (!val || val === '0' || isNaN(val)) { equiv.textContent = ''; return; }
+    try {
+      const eth = Number(BigInt(val) * BigInt(1e9) / WEI_PER_ETH) / 1e9;
+      equiv.textContent = `≈ ${eth.toFixed(6)} ETH`;
+    } catch { equiv.textContent = ''; }
+  });
 
   document.getElementById('btn-simulate').addEventListener('click', async () => {
     const btn = document.getElementById('btn-simulate');
@@ -310,9 +381,11 @@
 
         let html = '';
 
-        if (data.gasEstimate !== null) {
+        if (data.gasEstimate != null) {
+          const token = data.nativeToken || 'ETH';
           html += row('Gas estimate', data.gasEstimate.toLocaleString() + ' gas');
-          html += row('Gas cost (ETH)', data.gasCostETH ?? '—');
+          html += row(`Gas cost (${token})`, data.gasCostNative ?? '—');
+          html += row('Gas cost (USD)', data.gasCostUSD ? '$' + data.gasCostUSD : '—');
         }
 
         html += row('Logs emitted', data.logs.length > 0 ? `${data.logs.length} event(s)` : 'None');
