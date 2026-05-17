@@ -25,6 +25,42 @@ Content-Type: application/json
   "chainId": 1
 }
 
+### Preview - invalid address (expected 400)
+POST http://localhost:3000/preview
+Content-Type: application/json
+
+{
+  "from": "not-an-address",
+  "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "data": "0x",
+  "value": "0",
+  "chainId": 1
+}
+
+### Preview - invalid wei value (expected 400)
+POST http://localhost:3000/preview
+Content-Type: application/json
+
+{
+  "from": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "data": "0x",
+  "value": "1.5",
+  "chainId": 1
+}
+
+### Preview - unsupported chainId (expected 400)
+POST http://localhost:3000/preview
+Content-Type: application/json
+
+{
+  "from": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+  "to": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "data": "0x",
+  "value": "0",
+  "chainId": 999
+}
+
 ### Simulate - unpaid success payload (expected 402)
 POST http://localhost:3000/simulate
 Content-Type: application/json
@@ -49,6 +85,10 @@ Content-Type: application/json
   "chainId": 1
 }
 
+### Paid REST smoke
+# Run from PowerShell instead of pasting X-PAYMENT manually:
+# npm run test:paid
+
 ### MCP - initialize (free)
 POST http://localhost:3000/mcp
 Content-Type: application/json
@@ -64,6 +104,10 @@ Accept: application/json, text/event-stream
     "clientInfo": { "name": "test-client", "version": "1.0.0" }
   }
 }
+
+### Paid MCP assess smoke
+# Run from PowerShell instead of pasting X-PAYMENT manually:
+# npm run test:mcp:assess
 
 ### MCP - list tools (free)
 POST http://localhost:3000/mcp
