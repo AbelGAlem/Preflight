@@ -4,7 +4,7 @@ const { WALLET_ADDRESS, PRICE_PER_REQUEST, PAYMENT_NETWORK, PAYMENT_FACILITATOR_
 const PROTECTED_METHOD = 'POST';
 const PROTECTED_PATH = '/simulate';
 const MCP_PATH = '/mcp';
-const PAID_MCP_TOOL = 'preflight_simulate';
+const PAID_MCP_TOOLS = new Set(['preflight_simulate', 'preflight_assess']);
 const SUPPORTED_NETWORKS = new Set(['base', 'base-sepolia']);
 const BASE64_PAYMENT_REGEX = /^[A-Za-z0-9+/]*={0,2}$/;
 
@@ -73,7 +73,7 @@ const routeConfig = {
     price: formatUsdPrice(PRICE_PER_REQUEST),
     network: PAYMENT_NETWORK,
     config: {
-      description: `Invoke the PreFlight ${PAID_MCP_TOOL} MCP tool (one paid simulation per tools/call)`,
+      description: 'Invoke a paid PreFlight MCP tool (one paid simulation or assessment per tools/call)',
       mimeType: 'application/json',
       maxTimeoutSeconds: 60,
     },
@@ -110,7 +110,7 @@ function isPaidMcpCall(body) {
     (m) => m
       && m.method === 'tools/call'
       && m.params
-      && m.params.name === PAID_MCP_TOOL
+      && PAID_MCP_TOOLS.has(m.params.name)
   );
 }
 
